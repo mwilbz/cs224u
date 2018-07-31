@@ -220,7 +220,8 @@ def experiment(
         class_func=binary_class_func,
         score_func=utils.safe_macro_f1,
         vectorize=True,
-        verbose=True):
+        verbose=True,
+        view_errors=0):
     """Generic experimental framework for SST. Either assesses with a
     random train/test split of `train_reader` or with `assess_reader` if
     it is given.
@@ -299,14 +300,28 @@ def experiment(
             vectorizer=train['vectorizer'],
             vectorize=vectorize)
         X_assess, y_assess = assess['X'], assess['y']
+        
     # Train:
     mod = train_func(X_train, y_train)
+    
     # Predictions:
     predictions = mod.predict(X_assess)
+    
     # Report:
     if verbose:
         print('Accuracy: %0.03f' % accuracy_score(y_assess, predictions))
         print(classification_report(y_assess, predictions, digits=3))
+    
+    if view_errors > 0:
+        prediction_index = 0
+        dev_data = list(dev_reader())
+        for _ in range(view_errors):
+            while prediction_index < len(predictions) and predictions[prediction_index] == y_assess[prediction_index]:
+                prediction_index += 1
+                
+            print('Error: {} marked as {} but was {}'.format(' '.join(dev_data[prediction_index][0].leaves()), predictions[prediction_index], y_assess[prediction_index]))
+            prediction_index += 1
+        
     # Return the overall score:
     return score_func(y_assess, predictions)
 
